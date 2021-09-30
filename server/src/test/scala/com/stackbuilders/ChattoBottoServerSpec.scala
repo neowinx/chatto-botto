@@ -11,7 +11,8 @@ class ChattoBottoServerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLi
 
   "A ChattoBottoServer" must {
     "spawn a ChatRoom" in {
-      spawn(ChattoBottoServer())
+      val underTest = spawn(ChattoBottoServer())
+
     }
   }
 
