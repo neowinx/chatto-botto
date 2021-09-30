@@ -1,39 +1,39 @@
-//#full-example
 package com.stackbuilders
 
 
-import akka.actor.typed.scaladsl.Behaviors
-import com.typesafe.config.ConfigFactory
-import akka.cluster.typed.Cluster
-import akka.NotUsed
 import akka.actor.typed._
+import akka.actor.typed.scaladsl.Behaviors
+import akka.cluster.typed.Cluster
 import com.stackbuilders.ChatRoom._
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import akka.cluster.typed.Join
-
 
 object ChattoBottoClient {
-  import ChatRoom._
 
   def apply(): Behavior[SessionEvent] =
+    clientSession(None)
+
+  private def clientSession(poster: Option[ActorRef[PostMessage]]):Behavior[SessionEvent] =
     Behaviors.setup { context =>
       Behaviors.receiveMessage {
         case SessionGranted(handle) =>
-          handle ! PostMessage("Hello World!")
+          handle ! PostMessage("Welcome to ChattoBotto")
+          clientSession(Some(handle))
+        case Post(message) =>
+          poster match {
+            case Some(handle: ActorRef[PostMessage]) =>
+              handle ! PostMessage(message)
+          }
           Behaviors.same
         case SessionDenied(reason) =>
           context.log.info(s"session denied. $reason")
           Behaviors.stopped
         case MessagePosted(screenName, message) =>
           context.log.info(s"message has been posted by '$screenName': $message")
-          Behaviors.stopped
+          Behaviors.same
       }
     }
 }
 
 object ChattoBottoClientBootstrap {
-  import scala.io.StdIn
   
   final case class SaySomething(message: String)
   
@@ -41,13 +41,19 @@ object ChattoBottoClientBootstrap {
     Behaviors.setup { context =>
       val chatRoom = context.spawn(ChatRoom(), "chatroom")
       val client = context.spawn(ChattoBottoClient(), "chatobottoclient")
+
       Behaviors.receiveMessage { message =>
         message.message match {
-          case "/login" => 
-            val name = StdIn.readLine("enter your name:")
+          case s"/login $name" =>
             chatRoom ! ChatRoom.GetSession(name, client)
-          case _ =>  println("nothing")
-        } 
+          case s"/post $rest" =>
+            client ! Post(rest)
+          case s"/help" =>
+            println("\ncommands list:")
+            println("/login {NAME} - Start chatbot session")
+          case _ =>
+            println("type '/help' for command list")
+        }
         Behaviors.same
       }
     }
@@ -57,10 +63,13 @@ object ChattoBottoClientBootstrap {
 object Client extends App {
   import scala.io.StdIn
   
-  val system = ActorSystem(ChattoBottoClientBootstrap(), "ChatRoomDemo")
+  val system = ActorSystem(ChattoBottoClientBootstrap(), "ChattoBottoSystem")
   val cluster = Cluster(system)
   
-  val command = StdIn.readLine("command:")
-  system ! ChattoBottoClientBootstrap.SaySomething(command)
+  while (true) {
+    print(":")
+    val command = StdIn.readLine()
+    system ! ChattoBottoClientBootstrap.SaySomething(command)
+  }
 }
 

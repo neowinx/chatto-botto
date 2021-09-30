@@ -1,14 +1,8 @@
-//#full-example
 package com.stackbuilders
 
 
-import akka.NotUsed
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.typed.Cluster
-import akka.cluster.typed.Join
-import com.stackbuilders.ChatRoom._
-import com.typesafe.config.ConfigFactory
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -22,6 +16,7 @@ object ChatRoom {
   final case class SessionGranted(handle: ActorRef[PostMessage]) extends SessionEvent
   final case class SessionDenied(reason: String) extends SessionEvent
   final case class MessagePosted(screenName: String, message: String) extends SessionEvent
+  final case class Post(message: String) extends SessionEvent
 
   sealed trait SessionCommand
   final case class PostMessage(message: String) extends SessionCommand

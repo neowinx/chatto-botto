@@ -2,11 +2,11 @@ name := "chatto-botto"
 
 version := "1.0"
 
-scalaVersion := "2.13.6"
-
 lazy val akkaVersion = "2.6.16"
 
 lazy val commonSettings = Seq(
+  scalaVersion := "2.13.6",
+
   libraryDependencies ++= Seq(
     "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
     "com.typesafe.akka" %% "akka-cluster-typed" % akkaVersion,
@@ -18,7 +18,7 @@ lazy val commonSettings = Seq(
 
 lazy val server = (project in file("server")).settings(commonSettings: _*).aggregate(chatroom).dependsOn(chatroom).enablePlugins(JavaServerAppPackaging)
 
-lazy val client = (project in file("client")).settings(commonSettings: _*).aggregate(chatroom).dependsOn(chatroom)
+lazy val client = (project in file("client")).settings(commonSettings: _*).aggregate(chatroom).dependsOn(chatroom).enablePlugins(JavaServerAppPackaging)
 
 lazy val chatroom = (project in file("chatroom")).settings(commonSettings: _*)
 

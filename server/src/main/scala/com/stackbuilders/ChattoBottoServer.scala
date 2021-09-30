@@ -23,6 +23,6 @@ object ChattoBottoServer {
 
 
 object Server extends App {
-  val system = ActorSystem(ChattoBottoServer(), "ChatRoomDemo")
+  val system = ActorSystem(ChattoBottoServer(), "ChattoBottoSystem")
   val cluster = Cluster(system)
 }
