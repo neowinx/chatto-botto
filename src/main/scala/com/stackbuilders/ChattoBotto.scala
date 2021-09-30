@@ -64,7 +64,7 @@ object ChatRoom {
     }
 }
 
-object Gabbler {
+object ChattoBottoClient {
   import ChatRoom._
 
   def apply(): Behavior[SessionEvent] =
@@ -83,7 +83,7 @@ object Gabbler {
     }
 }
 
-object Main {
+object ChattoBotto {
   def apply(): Behavior[NotUsed] =
     Behaviors.setup { context =>
       context.spawn(ChatRoom(), "chatroom")
@@ -94,7 +94,27 @@ object Main {
     }
 }
 
-object ChattoBotto extends App {
-  val system = ActorSystem(Main(), "ChatRoomDemo")
+
+object Client extends App {
+  import scala.concurrent.Future
+  import akka.actor.ActorSystem
+  import akka.stream.{ActorMaterializer, IOResult, Materializer}
+  import akka.stream.scaladsl.{Sink, Source, StreamConverters}
+  import akka.util.ByteString
+
+  implicit val sys: ActorSystem = ActorSystem("ChatRoomDemo")
+  implicit val mat: Materializer = ActorMaterializer()
+
+  val stdinSource: Source[ByteString, Future[IOResult]] = StreamConverters.fromInputStream(() => System.in)
+  val stdoutSink: Sink[ByteString, Future[IOResult]] = StreamConverters.fromOutputStream(() => System.out)
+
+  def sendToChattoBotto(byteString: ByteString): ByteString =
+    ByteString(byteString.utf8String)
+
+  stdinSource.map(sendToChattoBotto).runWith(stdoutSink)
+}
+
+object Server extends App {
+  val system = ActorSystem(ChattoBotto(), "ChatRoomDemo")
   val cluster = Cluster(system)
 }
