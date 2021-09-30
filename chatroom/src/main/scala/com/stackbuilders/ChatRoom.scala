@@ -2,15 +2,16 @@
 package com.stackbuilders
 
 
-import akka.actor.typed.scaladsl.Behaviors
-import com.typesafe.config.ConfigFactory
-import akka.cluster.typed.Cluster
 import akka.NotUsed
 import akka.actor.typed._
+import akka.actor.typed.scaladsl.Behaviors
+import akka.cluster.typed.Cluster
+import akka.cluster.typed.Join
 import com.stackbuilders.ChatRoom._
+import com.typesafe.config.ConfigFactory
+
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import akka.cluster.typed.Join
 
 
 object ChatRoom {
@@ -64,57 +65,3 @@ object ChatRoom {
     }
 }
 
-object ChattoBottoClient {
-  import ChatRoom._
-
-  def apply(): Behavior[SessionEvent] =
-    Behaviors.setup { context =>
-      Behaviors.receiveMessage {
-        case SessionGranted(handle) =>
-          handle ! PostMessage("Hello World!")
-          Behaviors.same
-        case SessionDenied(reason) =>
-          context.log.info(s"session denied. $reason")
-          Behaviors.stopped
-        case MessagePosted(screenName, message) =>
-          context.log.info(s"message has been posted by '$screenName': $message")
-          Behaviors.stopped
-      }
-    }
-}
-
-object ChattoBotto {
-  def apply(): Behavior[NotUsed] =
-    Behaviors.setup { context =>
-      context.spawn(ChatRoom(), "chatroom")
-      Behaviors.receiveSignal {
-        case (_, Terminated(_)) =>
-          Behaviors.stopped
-      }
-    }
-}
-
-
-object Client extends App {
-  import scala.concurrent.Future
-  import akka.actor.ActorSystem
-  import akka.stream.{ActorMaterializer, IOResult, Materializer}
-  import akka.stream.scaladsl.{Sink, Source, StreamConverters}
-  import akka.util.ByteString
-
-  implicit val sys: ActorSystem = ActorSystem("ChatRoomDemo")
-  implicit val mat: Materializer = ActorMaterializer()
-
-  val stdinSource: Source[ByteString, Future[IOResult]] = StreamConverters.fromInputStream(() => System.in)
-  val stdoutSink: Sink[ByteString, Future[IOResult]] = StreamConverters.fromOutputStream(() => System.out)
-
-  def sendToChattoBotto(byteString: ByteString): ByteString =
-    ByteString(byteString.utf8String)
-
-  stdinSource.map(sendToChattoBotto).runWith(stdoutSink)
-}
-
-object Server extends App {
-  val system = ActorSystem(ChattoBotto(), "ChatRoomDemo")
-  val cluster = Cluster(system)
-}
