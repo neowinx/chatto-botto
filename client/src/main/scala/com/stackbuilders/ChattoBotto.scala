@@ -60,7 +60,7 @@ object Client extends App {
   val system = ActorSystem(ChattoBottoClientBootstrap(), "ChatRoomDemo")
   val cluster = Cluster(system)
   
-  println("Hello")
-  system ! ChattoBottoClientBootstrap.SaySomething(":login moloko")
+  val command = StdIn.readLine("command:")
+  system ! ChattoBottoClientBootstrap.SaySomething(command)
 }
 

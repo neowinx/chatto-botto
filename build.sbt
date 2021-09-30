@@ -16,7 +16,7 @@ lazy val commonSettings = Seq(
   )
 )
 
-lazy val server = (project in file("server")).settings(commonSettings: _*).aggregate(chatroom).dependsOn(chatroom)
+lazy val server = (project in file("server")).settings(commonSettings: _*).aggregate(chatroom).dependsOn(chatroom).enablePlugins(JavaServerAppPackaging)
 
 lazy val client = (project in file("client")).settings(commonSettings: _*).aggregate(chatroom).dependsOn(chatroom)
 
