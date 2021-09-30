@@ -10,6 +10,7 @@ import akka.actor.typed._
 import com.stackbuilders.ChatRoom._
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import akka.cluster.typed.Join
 
 
 object ChatRoom {
@@ -72,6 +73,9 @@ object Gabbler {
         case SessionGranted(handle) =>
           handle ! PostMessage("Hello World!")
           Behaviors.same
+        case SessionDenied(reason) =>
+          context.log.info(s"session denied. $reason")
+          Behaviors.stopped
         case MessagePosted(screenName, message) =>
           context.log.info(s"message has been posted by '$screenName': $message")
           Behaviors.stopped
@@ -82,11 +86,7 @@ object Gabbler {
 object Main {
   def apply(): Behavior[NotUsed] =
     Behaviors.setup { context =>
-      val chatRoom = context.spawn(ChatRoom(), "chatroom")
-      val gabblerRef = context.spawn(Gabbler(), "gabbler")
-      context.watch(gabblerRef)
-      chatRoom ! ChatRoom.GetSession("ol’ Gabbler", gabblerRef)
-
+      context.spawn(ChatRoom(), "chatroom")
       Behaviors.receiveSignal {
         case (_, Terminated(_)) =>
           Behaviors.stopped
@@ -95,6 +95,6 @@ object Main {
 }
 
 object ChattoBotto extends App {
-  val greeterMain = ActorSystem(Main(), "ChattoBotto")
-  val cluster = Cluster(greeterMain)
+  val system = ActorSystem(Main(), "ChatRoomDemo")
+  val cluster = Cluster(system)
 }
