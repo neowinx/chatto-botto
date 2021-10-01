@@ -2,7 +2,9 @@ package com.stackbuilders
 
 import akka.actor.testkit.typed.Effect.Spawned
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import com.stackbuilders.ChatRoom.{RoomCommand, SessionEvent, SessionGranted}
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.Behaviors
+import com.stackbuilders.ChatRoom.{GetSession, PostMessage, RoomCommand, SessionCommand, SessionEvent, SessionGranted}
 import org.scalatest.wordspec.AnyWordSpecLike
 
 class ChattoBottoServerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
@@ -12,16 +14,17 @@ class ChattoBottoServerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLi
   "A ChattoBottoServer" must {
     "spawn a ChatRoom" in {
       val underTest = spawn(ChattoBottoServer())
-
+      //TODO: See how we can check for the child actors on tests
     }
   }
 
   "A ChattRoom" must {
-    "spawn a" in {
-      val respondTo = createTestProbe[SessionEvent]()
-      val underTest = spawn(ChatRoom())
-      //underTest ! ChatRoom.GetSession("maria", respondTo)
-      //respondTo.expectMessage(SessionGranted(handle = ActorRe))
+    "grant session to clients" in {
+      val chatRoomActor = spawn(ChatRoom())
+      val clientProbe = createTestProbe[SessionEvent]()
+      chatRoomActor ! ChatRoom.GetSession("maria", clientProbe.ref)
+      val message = clientProbe.receiveMessage()
+      message shouldBe a [SessionGranted]
     }
   }
 
