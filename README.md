@@ -15,6 +15,11 @@ Also uses the recommended functional style to implement the actors
 - [Java 8+](https://openjdk.java.net/install/)
 - [SBT](https://www.scala-sbt.org/)
 
+## Configuration
+
+Configuration parameters are in the corresponding `application.conf` of 
+the `client` and `server` projects
+
 ## Usage
 
 It is recommended to stage the projects and use them from the console sicne sbt
@@ -34,7 +39,17 @@ sbt "project client ; stage"
 ./client/target/universal/stage/bin/client
 ```
 
-- Enter /help for display the help in the client or just enter any text 
+- Enter `/help` for display the help in the client 
+
+### Commands
+
+```bash
+- /login {NAME} - Start chato-botto session
+- /quit - Quits chatto-botto
+```
+
+Once you have a session every text inserted in the client will be send to the corresponding actors 
+through the Akka Cluster
 
 # Enjoy
 
