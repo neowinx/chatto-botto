@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets
 object ChatRoom {
   sealed trait RoomCommand
   final case class GetSession(screenName: String, replyTo: ActorRef[SessionEvent]) extends RoomCommand
+  final case class Disconnect(screenName: String) extends RoomCommand
 
   sealed trait SessionEvent
   final case class SessionGranted(handle: ActorRef[PostMessage]) extends SessionEvent
@@ -34,15 +35,27 @@ object ChatRoom {
           // create a child actor for further interaction with the client
           val ses = context.spawn(
             session(context.self, screenName, client),
-            name = URLEncoder.encode(screenName, StandardCharsets.UTF_8.name))
+            parseName(screenName))
           client ! SessionGranted(ses)
           chatRoom(ses :: sessions)
+        case Disconnect(screenName) =>
+          val name = parseName(screenName)
+          context.child(name) match {
+            case Some(ses: ActorRef[SessionCommand]) =>
+              context.stop(ses)
+              chatRoom(sessions.filterNot(s => s == ses))
+            case _ =>
+              Behaviors.same
+          }
         case PublishSessionMessage(screenName, message) =>
           val notification = NotifyClient(MessagePosted(screenName, message))
           sessions.foreach(_ ! notification)
           Behaviors.same
       }
     }
+
+  private def parseName(screenName: String) =
+    URLEncoder.encode(screenName, StandardCharsets.UTF_8.name)
 
   private def session(
       room: ActorRef[PublishSessionMessage],

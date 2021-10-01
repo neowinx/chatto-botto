@@ -2,7 +2,7 @@ package com.stackbuilders
 
 
 import akka.actor.typed._
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.typed.Cluster
 import com.stackbuilders.ChatRoom._
 
@@ -19,8 +19,10 @@ object ChattoBottoClient {
           clientSession(Some(handle))
         case Post(message) =>
           poster match {
-            case Some(handle: ActorRef[PostMessage]) =>
-              handle ! PostMessage(message)
+            case Some(handle: ActorRef[PostMessage]) => handle ! PostMessage(message)
+            case _ => 
+              context.log.info(s"No handler found for posting message: $message")
+              context.log.info(s"\nPlease enter the /login command to start a chat session or /help for command list")
           }
           Behaviors.same
         case SessionDenied(reason) =>
@@ -36,27 +38,48 @@ object ChattoBottoClient {
 object ChattoBottoClientBootstrap {
   
   final case class SaySomething(message: String)
-  
+
+  private case class BoostrapData(name: String, client: ActorRef[SessionEvent])
+
   def apply(): Behavior[SaySomething] =
     Behaviors.setup { context =>
       val chatRoom = context.spawn(ChatRoom(), "chatroom")
       val client = context.spawn(ChattoBottoClient(), "chatobottoclient")
 
+      clientBootstrap(context, chatRoom, client, None)
+    }
+
+  //TODO: Probably should define some of these as implicit parameters to diminish the code noise
+  def clientBootstrap(context: ActorContext[SaySomething],
+                      chatRoom: ActorRef[RoomCommand],
+                      client: ActorRef[SessionEvent],
+                      maybeBoostrapData: Option[BoostrapData]): Behavior[SaySomething] =
       Behaviors.receiveMessage { message =>
         message.message match {
           case s"/login $name" =>
             chatRoom ! ChatRoom.GetSession(name, client)
-          case s"/post $rest" =>
-            client ! Post(rest)
+            clientBootstrap(
+              context, chatRoom, client,
+              Some(BoostrapData(name, client)))
+          case s"/quit" =>
+            maybeBoostrapData match {
+              case Some(boostrapData) => chatRoom ! ChatRoom.Disconnect(boostrapData.name)
+              case _ => context.log.error(s"cannot logout from session. Session not started?")
+            }
+            Behaviors.same
           case s"/help" =>
             println("\ncommands list:")
             println("/login {NAME} - Start chatbot session")
-          case _ =>
-            println("type '/help' for command list")
+            println("/quit - Quits chatto-botto")
+            Behaviors.same
+          case s"$message" =>
+            if (message.nonEmpty)
+              client ! Post(message)
+            else
+              println("\ntype '/help' for command list")
+            Behaviors.same
         }
-        Behaviors.same
       }
-    }
 
 }
 
