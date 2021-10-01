@@ -3,6 +3,7 @@ package com.stackbuilders
 
 import akka.actor.typed._
 import akka.actor.typed.scaladsl.Behaviors
+import com.typesafe.config.ConfigFactory
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -24,6 +25,13 @@ object ChatRoom {
   private final case class NotifyClient(message: MessagePosted) extends SessionCommand
   
   private final case class PublishSessionMessage(screenName: String, message: String) extends RoomCommand
+
+  private final case class Keyword(val key: String, val info: String)
+
+  private val keyWords = List (
+    Keyword("stackbuilders", "Go to https://stackbuilder.com"),
+    Keyword("google", "Go to https://google.com")
+  )
 
   def apply(): Behavior[RoomCommand] =
     chatRoom(List.empty)
@@ -48,7 +56,8 @@ object ChatRoom {
               Behaviors.same
           }
         case PublishSessionMessage(screenName, message) =>
-          val notification = NotifyClient(MessagePosted(screenName, message))
+          val infoList = keyWords.filter(kw => message.contains(kw.key)).map(kw => kw.info).mkString("\n")
+          val notification = NotifyClient(MessagePosted(screenName, s"$message$infoList"))
           sessions.foreach(_ ! notification)
           Behaviors.same
       }
